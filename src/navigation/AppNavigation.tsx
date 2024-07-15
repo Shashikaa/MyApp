@@ -6,6 +6,7 @@ import SignupScreen from '../screens/SignupScreen';
 import HomePage from '../screens/HomePage';
 import ProfileScreen from '../screens/ProfileScreen';
 import SearchResultsScr from '../screens/SearchResultsScr';
+import BatteryLevelScreen from '../screens/BatteryLevelScreen'; // Import the BatteryLevelScreen
 
 // Define a type for the stack navigator
 type RootStackParamList = {
@@ -13,7 +14,8 @@ type RootStackParamList = {
   Signup: undefined;
   Home: undefined;
   Profile: undefined;
-  SearchResults: { searchResults: any[] }; 
+  SearchResults: { searchResults: any[] };
+  Battery: undefined; // Add Battery screen type
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -33,6 +35,7 @@ const AppNavigation: React.FC = () => {
         <Stack.Screen name="Home" component={HomePage} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="SearchResults" component={SearchResultsScr} />
+        <Stack.Screen name="Battery" component={BatteryLevelScreen} /> 
       </Stack.Navigator>
     </NavigationContainer>
   );

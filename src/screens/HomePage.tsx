@@ -20,6 +20,7 @@ type RootStackParamList = {
 };
 
 type NavigationPropType = NavigationProp<RootStackParamList>;
+
 const HomePage: React.FC = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,7 @@ const HomePage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [voiceLoading, setVoiceLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const navigation = useNavigation<NavigationPropType>();
   const route = useRoute<any>();
@@ -66,6 +68,11 @@ const HomePage: React.FC = () => {
   };
 
   const handleSearch = async () => {
+    if (!searchInput.trim()) {
+      setSearchError('Search input cannot be empty');
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await axios.get(`https://thronesapi.com/api/v2/characters`);
@@ -73,9 +80,15 @@ const HomePage: React.FC = () => {
       const filtered = allCharacters.filter(character => 
         character.fullName.toLowerCase().includes(searchInput.toLowerCase())
       );
-      navigation.navigate('SearchResults', { searchResults: filtered });
+      
+      if (filtered.length === 0) {
+        setSearchError('No results found');
+      } else {
+        setSearchError(null);
+        navigation.navigate('SearchResults', { searchResults: filtered });
+      }
     } catch (err) {
-      setError('Failed to load search results');
+      setSearchError('Failed to load search results');
     } finally {
       setLoading(false);
     }
@@ -119,6 +132,9 @@ const HomePage: React.FC = () => {
 
   const handleSearchInputChange = (text: string) => {
     setSearchInput(text);
+    if (text.trim() === '') {
+      setSearchError(null);  // Clear search error if input is cleared
+    }
   };
 
   if (loading && page === 1) {
@@ -166,7 +182,7 @@ const HomePage: React.FC = () => {
           value={searchInput}
           onChangeText={handleSearchInputChange}
         />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+        <TouchableOpacity style={styles.searchButton} onPress={handleSearch} disabled={!searchInput.trim()}>
           <Icon
             name='search'
             color="white"
@@ -185,6 +201,11 @@ const HomePage: React.FC = () => {
       </View>
       {voiceLoading && (
         <ActivityIndicator size="large" color="#FFD482" />
+      )}
+      {searchError && (
+        <View style={styles.centeredContainer}>
+          <Text style={styles.text}>{searchError}</Text>
+        </View>
       )}
       <FlatList
         data={characters}

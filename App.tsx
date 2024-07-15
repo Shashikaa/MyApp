@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import AppNavigation from './src/navigation/AppNavigation';
 import 'react-native-gesture-handler';
 
+
 // Splash Screen Component
 const SplashScreen = () => {
   return (

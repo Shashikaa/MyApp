@@ -6,6 +6,10 @@ import { getAuth, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseinit';
 import { NativeStackNavigationProp } from 'react-native-screens/lib/typescript/native-stack/types';
+import { NativeModules } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+const { BatteryModule } = NativeModules;
 
 interface UserData {
   profilePicture?: string;
@@ -25,6 +29,7 @@ const ProfileScreen: React.FC = () => {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<ProfileScreenRouteProp>();
   const { email } = route.params;
@@ -52,7 +57,17 @@ const ProfileScreen: React.FC = () => {
       }
     };
 
+    const fetchBatteryLevel = async () => {
+      try {
+        const level = await BatteryModule.getBatteryLevel();
+        setBatteryLevel(level);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
     fetchUserData();
+    fetchBatteryLevel();
   }, [email]);
 
   const handleLogout = async () => {
@@ -97,6 +112,14 @@ const ProfileScreen: React.FC = () => {
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>{user.email || 'Email not available'}</Text>
             </View>
+            <View style={styles.infoBox}>
+              <View style={styles.batteryContainer}>
+                <Icon name="battery" size={40} color="white" />
+                <Text style={styles.batteryText}>
+                  {batteryLevel !== null ? `${batteryLevel}%` : 'Loading...'}
+                </Text>
+              </View>
+            </View>
           </View>
         </>
       ) : (
@@ -139,6 +162,15 @@ const styles = StyleSheet.create({
   infoText: {
     color: 'white',
     fontSize: 18,
+  },
+  batteryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  batteryText: {
+    color: 'white',
+    fontSize: 18,
+    marginLeft: 10,
   },
   logoutButton: {
     backgroundColor: '#FFD482',

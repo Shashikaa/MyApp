@@ -1,152 +1,180 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@rneui/themed';
 import { useNavigation } from '@react-navigation/native';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { collection, addDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebase/firebaseinit'; 
 
-const SignUpField = () => {
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [password, setPassword] = useState('');
-  const containsLowercase = (password) => /[a-z]/.test(password);
-  
-  return (
-    <View>
-      <View style={styles.inputContainer}>
-        <TextInput 
-          placeholder='Name'
-          placeholderTextColor='#C0C0C0'
-          style={styles.textInput}
-        />
-      </View>
+const SignupScreen: React.FC = () => {
+  const navigation = useNavigation<any>(); 
 
-      <View style={styles.inputContainer}>
-        <TextInput 
-          placeholder='Your Email'
-          placeholderTextColor='#C0C0C0'
-          style={styles.textInput}
-        />
-      </View>
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
 
-      <View style={styles.passwordContainer}>
-        <TextInput 
-          placeholder='Password'
-          placeholderTextColor='#C0C0C0'
-          secureTextEntry={!showPassword}
-          style={styles.textInput}
-        />
-        <Icon 
-          name={showPassword ? 'eye-off' : 'eye'}
-          color="white"
-          type='feather'
-          size={15}
-          onPress={() => setShowPassword(!showPassword)}
-        />
-      </View>
+  const containsLowercase = (password: string): boolean => /[a-z]/.test(password);
+  const containsUppercase = (password: string): boolean => /[A-Z]/.test(password);
+  const containsSpecialChar = (password: string): boolean => /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
-      <View style={styles.passwordContainer}>
-        <TextInput 
-          placeholder='Confirm Password'
-          placeholderTextColor='#C0C0C0'
-          secureTextEntry={!showPassword}
-          style={styles.textInput}
-        />
-        <Icon 
-          name={showPassword ? 'eye-off' : 'eye'}
-          color="white"
-          type='feather'
-          size={15}
-          onPress={() => setShowPassword(!showPassword)}
-        />
-      </View>
-      <View style={styles.passwordHintContainer}>
-        <Icon 
-          name={containsLowercase(password) ? 'check' : 'refresh-cw'}
-          color="white"
-          type='feather'
-          size={15}
-        />
-        <Text style={styles.passwordHintText}>
-          One lowercase character
-        </Text>
-        
-      </View>
+  const handleSignUp = async () => {
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+    if (!containsLowercase(password) || !containsUppercase(password) || !containsSpecialChar(password) || password.length < 8) {
+      Alert.alert('Error', 'Password does not meet the requirements');
+      return;
+    }
 
-      <View style={styles.passwordHintUppercaseContainer}>
-        <Icon 
-          name={containsLowercase(password) ? 'check' : 'refresh-cw'}
-          color="white"
-          type='feather'
-          size={15}
-        />
-        <Text style={styles.passwordHintText}>
-          One Uppercase character
-        </Text>
-      </View>
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      <View style={styles.passwordHintContainer}>
-        <Icon 
-          name={containsLowercase(password) ? 'check' : 'refresh-cw'}
-          color="white"
-          type='feather'
-          size={15}
-        />
-        <Text style={styles.passwordHintText}>
-          One special character
-        </Text>
-        
-      </View>
+      console.log('User created:', user); // Debugging log
 
-      <View style={styles.passwordHintUppercaseContainer}>
-        <Icon 
-          name={containsLowercase(password) ? 'check' : 'refresh-cw'}
-          color="white"
-          type='feather'
-          size={15}
-        />
-        <Text style={styles.passwordHintText}>
-          8 charactern minimum
-        </Text>
-      </View>
-    
-    </View>
-  );
-};
+      // Store additional user data in Firestore
+      await addDoc(collection(db, 'Users'), {
+        email: user.email,
+        name: name,
+        uid: user.uid,
+      });
 
-const SignInButton = () => {
-  return (
-    <View style={styles.buttonContainer}>
-      <Text style={styles.buttonText}>
-        Sign Up
-      </Text>
-    </View>
-  );
-};
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') }
+      ]);
+    } catch (error) {
+      console.error('Error creating user:', error); // Debugging log
+      Alert.alert('Error', (error as Error).message);
+    }
+  };
 
-const LogInButton = () => {
-  const navigation = useNavigation();
-
-  return (
-    <View style={styles.signUpContainer}>
-      <Text style={styles.signUpText}>
-        Have an account?{' '}
-      </Text>
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.signUpLink}>
-          Sign In
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-const SignupScreen = () => {
   return (
     <View style={styles.container}>
       <KeyboardAwareScrollView keyboardShouldPersistTaps='never'>
         <Text style={styles.headerText}>My App</Text>
-        <SignUpField />
-        <SignInButton />
-        <LogInButton />
+        <View>
+          <View style={styles.inputContainer}>
+            <TextInput 
+              placeholder='Name'
+              placeholderTextColor='#C0C0C0'
+              style={styles.textInput}
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <TextInput 
+              placeholder='Your Email'
+              placeholderTextColor='#C0C0C0'
+              style={styles.textInput}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType='email-address'
+            />
+          </View>
+
+          <View style={styles.passwordContainer}>
+            <TextInput 
+              placeholder='Password'
+              placeholderTextColor='#C0C0C0'
+              secureTextEntry={!showPassword}
+              style={styles.textInput}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Icon 
+              name={showPassword ? 'eye-off' : 'eye'}
+              color="white"
+              type='feather'
+              size={15}
+              onPress={() => setShowPassword(!showPassword)}
+            />
+          </View>
+
+          <View style={styles.passwordContainer}>
+            <TextInput 
+              placeholder='Confirm Password'
+              placeholderTextColor='#C0C0C0'
+              secureTextEntry={!showPassword}
+              style={styles.textInput}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+            <Icon 
+              name={showPassword ? 'eye-off' : 'eye'}
+              color="white"
+              type='feather'
+              size={15}
+              onPress={() => setShowPassword(!showPassword)}
+            />
+          </View>
+
+          <View style={styles.passwordHintContainer}>
+            <Icon 
+              name={containsLowercase(password) ? 'check' : 'refresh-cw'}
+              color="white"
+              type='feather'
+              size={15}
+            />
+            <Text style={styles.passwordHintText}>
+              One lowercase character
+            </Text>
+          </View>
+
+          <View style={styles.passwordHintUppercaseContainer}>
+            <Icon 
+              name={containsUppercase(password) ? 'check' : 'refresh-cw'}
+              color="white"
+              type='feather'
+              size={15}
+            />
+            <Text style={styles.passwordHintText}>
+              One uppercase character
+            </Text>
+          </View>
+
+          <View style={styles.passwordHintContainer}>
+            <Icon 
+              name={containsSpecialChar(password) ? 'check' : 'refresh-cw'}
+              color="white"
+              type='feather'
+              size={15}
+            />
+            <Text style={styles.passwordHintText}>
+              One special character
+            </Text>
+          </View>
+
+          <View style={styles.passwordHintUppercaseContainer}>
+            <Icon 
+              name={password.length >= 8 ? 'check' : 'refresh-cw'}
+              color="white"
+              type='feather'
+              size={15}
+            />
+            <Text style={styles.passwordHintText}>
+              8 characters minimum
+            </Text>
+          </View>
+
+          <TouchableOpacity onPress={handleSignUp}>
+            <View style={styles.buttonContainer}>
+              <Text style={styles.buttonText}>Sign Up</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>Have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.signUpLink}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAwareScrollView>
     </View>
   );
@@ -213,7 +241,7 @@ const styles = StyleSheet.create({
     height: 60,
     backgroundColor: '#FFD482',
     borderRadius: 10,
-    marginTop: 80,
+    marginTop: 40,
     marginLeft: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -224,7 +252,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   signUpContainer: {
-    marginTop: 140,
+    marginTop: 150,
     marginLeft: 20,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -232,11 +260,11 @@ const styles = StyleSheet.create({
   },
   signUpText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 15,
   },
   signUpLink: {
     color: '#FFD482',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
     textDecorationLine: 'underline',
   },
